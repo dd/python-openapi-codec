@@ -143,12 +143,33 @@ def _get_property_type(the_schema):
     }.get(the_schema.__class__, 'string')
 
 
-def _field_properties_for_fields(field__schema_properties):
+def _field_properties_for_fields(properties):
     field_properties = {}
-    for k in field__schema_properties:
+    for k in properties:
         field_properties[k] = {
-            'type': _get_property_type(field__schema_properties[k])
+            'type': _get_property_type(properties[k])
         }
+
+        if field_properties[k]['type'] == "object":
+            field_properties[k]['properties'] = _field_properties_for_fields(properties[k].properties)
+
+        elif field_properties[k]['type'] == "array":
+            # field_properties[k]['items'] = _field_properties_for_fields(properties[k].items)
+
+            if hasattr(properties[k].items, 'properties'):
+                # the array contains object instances, we need to inspect their properties
+                field_properties[k]['items'] = {
+                    'type': 'object',
+                    'properties': _field_properties_for_fields(
+                        properties[k].items.properties
+                    )
+                }
+            else:
+                # the array contains primitive types
+                field_properties[k]['items'] = {
+                    'type': _get_property_type(properties[k].items),
+                }
+
     return field_properties
 
 
