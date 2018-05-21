@@ -144,33 +144,35 @@ def _get_property_type(the_schema):
 
 
 def _field_properties_for_fields(properties):
-    field_properties = {}
-    for k in properties:
-        field_properties[k] = {
-            'type': _get_property_type(properties[k])
+    result = {}
+    for prop, data in properties.items():
+        result[prop] = {
+            'type': _get_property_type(data),
+            'description': _get_field_description(data),
         }
 
-        if field_properties[k]['type'] == "object":
-            field_properties[k]['properties'] = _field_properties_for_fields(properties[k].properties)
+        if hasattr(data, 'required'):
+            result[prop]['required'] = getattr(data, 'required', False)
 
-        elif field_properties[k]['type'] == "array":
-            # field_properties[k]['items'] = _field_properties_for_fields(properties[k].items)
+        if result[prop]['type'] == "object":
+            result[prop]['properties'] = _field_properties_for_fields(data.properties)
 
-            if hasattr(properties[k].items, 'properties'):
+        elif result[prop]['type'] == "array":
+            if hasattr(properties[prop].items, 'properties'):
                 # the array contains object instances, we need to inspect their properties
-                field_properties[k]['items'] = {
+                result[prop]['items'] = {
                     'type': 'object',
                     'properties': _field_properties_for_fields(
-                        properties[k].items.properties
+                        data.items.properties
                     )
                 }
             else:
                 # the array contains primitive types
-                field_properties[k]['items'] = {
-                    'type': _get_property_type(properties[k].items),
+                result[prop]['items'] = {
+                    'type': _get_property_type(data.items),
                 }
 
-    return field_properties
+    return result
 
 
 def _get_parameters(link, encoding):
